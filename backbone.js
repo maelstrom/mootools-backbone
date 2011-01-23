@@ -25,8 +25,9 @@
   var _ = this._;
   if (!_ && (typeof require !== 'undefined')) _ = require('underscore')._;
 
-  // For Backbone's purposes, either jQuery or Zepto owns the `$` variable.
-  var $ = this.jQuery || this.Zepto;
+  // For Backbone's purposes, MooTools owns the `$' variable
+  var $ = this.$;
+  var $$ = this.$$;
 
   // Turn on `emulateHTTP` to use support legacy HTTP servers. Setting this option will
   // fake `"PUT"` and `"DELETE"` requests via the `_method` parameter and set a
@@ -252,12 +253,12 @@
     fetch : function(options) {
       options || (options = {});
       var model = this;
-      var success = options.success;
-      options.success = function(resp) {
+      var success = options.onSuccess;
+      options.onSuccess = function(resp) {
         if (!model.set(model.parse(resp), options)) return false;
         if (success) success(model, resp);
       };
-      options.error = wrapError(options.error, model, options);
+      options.onError = wrapError(options.onError, model, options);
       (this.sync || Backbone.sync)('read', this, options);
       return this;
     },
@@ -269,12 +270,12 @@
       options || (options = {});
       if (attrs && !this.set(attrs, options)) return false;
       var model = this;
-      var success = options.success;
-      options.success = function(resp) {
+      var success = options.onSuccess;
+      options.onSuccess = function(resp) {
         if (!model.set(model.parse(resp), options)) return false;
         if (success) success(model, resp);
       };
-      options.error = wrapError(options.error, model, options);
+      options.onError = wrapError(options.onError, model, options);
       var method = this.isNew() ? 'create' : 'update';
       (this.sync || Backbone.sync)(method, this, options);
       return this;
@@ -285,12 +286,12 @@
     destroy : function(options) {
       options || (options = {});
       var model = this;
-      var success = options.success;
-      options.success = function(resp) {
+      var success = options.onSuccess;
+      options.onSuccess = function(resp) {
         model.trigger('destroy', model, model.collection, options);
         if (success) success(model, resp);
       };
-      options.error = wrapError(options.error, model, options);
+      options.onError = wrapError(options.onError, model, options);
       (this.sync || Backbone.sync)('delete', this, options);
       return this;
     },
@@ -495,12 +496,12 @@
     fetch : function(options) {
       options || (options = {});
       var collection = this;
-      var success = options.success;
-      options.success = function(resp) {
+      var success = options.onSuccess;
+      options.onSuccess = function(resp) {
         collection[options.add ? 'add' : 'refresh'](collection.parse(resp), options);
         if (success) success(collection, resp);
       };
-      options.error = wrapError(options.error, collection, options);
+      options.onError = wrapError(options.onError, collection, options);
       (this.sync || Backbone.sync)('read', this, options);
       return this;
     },
@@ -723,12 +724,12 @@
     // an existing route, and `false` otherwise.
     start : function() {
       var docMode = document.documentMode;
-      var oldIE = ($.browser.msie && (!docMode || docMode <= 7));
+      var oldIE = (Browser.ie && (!docMode || docMode <= 7));
       if (oldIE) {
-        this.iframe = $('<iframe src="javascript:0" tabindex="-1" />').hide().appendTo('body')[0].contentWindow;
+        this.iframe = new Element('iframe', {src:"javascript:0", tabindex:"-1", styles:{display:'none'}}).appendTo(document.body);
       }
       if ('onhashchange' in window && !oldIE) {
-        $(window).bind('hashchange', this.checkUrl);
+        window.addEvent('hashchange', this.checkUrl);
       } else {
         setInterval(this.checkUrl, this.interval);
       }
@@ -802,7 +803,7 @@
   // This should be prefered to global lookups, if you're dealing with
   // a specific view.
   var selectorDelegate = function(selector) {
-    return $(selector, this.el);
+    return this.el.getElements(selector);
   };
 
   // Cached regex to split keys for `delegate`.
@@ -831,7 +832,7 @@
     // Remove this view from the DOM. Note that the view isn't present in the
     // DOM by default, so calling this method may be a no-op.
     remove : function() {
-      $(this.el).remove();
+      this.el.dispose();
       return this;
     },
 
@@ -841,9 +842,8 @@
     //     var el = this.make('li', {'class': 'row'}, this.model.get('title'));
     //
     make : function(tagName, attributes, content) {
-      var el = document.createElement(tagName);
-      if (attributes) $(el).attr(attributes);
-      if (content) $(el).html(content);
+      var el = new Element(tagName, attributes);
+      if (content) el.set('html', content);
       return el;
     },
 
@@ -863,19 +863,27 @@
     // not `change`, `submit`, and `reset` in Internet Explorer.
     delegateEvents : function(events) {
       if (!(events || (events = this.events))) return;
-      $(this.el).unbind('.delegateEvents' + this.cid);
-      for (var key in events) {
+
+      var oldEvents = this.el.retrieve('Model.Events.' + this.cid);
+      var newEvents = {};
+      var key;
+      for (key in oldEvents) {
+        this.el.removeEvents(key, oldEvents[key]);
+      }
+
+      for (key in events) {
         var methodName = events[key];
         var match = key.match(eventSplitter);
         var eventName = match[1], selector = match[2];
         var method = _.bind(this[methodName], this);
-        eventName += '.delegateEvents' + this.cid;
-        if (selector === '') {
-          $(this.el).bind(eventName, method);
-        } else {
-          $(this.el).delegate(selector, eventName, method);
+        if (selector !== '') {
+          eventName+= ':relay(' + selector + ')';
         }
+        this.el.addEvent(eventName, method);
+        newEvents[eventName] = method;
       }
+
+      this.el.store('Model.Events.' + this.cid, newEvents);
     },
 
     // Performs the initial configuration of a View with a set of options.
@@ -893,8 +901,7 @@
     },
 
     // Ensure that the View has a DOM element to render into.
-    // If `this.el` is a string, pass it through `$()`, take the first
-    // matching element, and re-assign it to `el`. Otherwise, create
+    // If `this.el` is a string, pass it through `$()`, Otherwise, create
     // an element from the `id`, `className` and `tagName` proeprties.
     _ensureElement : function() {
       if (!this.el) {
@@ -903,7 +910,7 @@
         if (this.className) attrs['class'] = this.className;
         this.el = this.make(this.tagName, attrs);
       } else if (_.isString(this.el)) {
-        this.el = $(this.el).get(0);
+        this.el = $(this.el);
       }
     }
 
@@ -947,11 +954,11 @@
   // Useful when interfacing with server-side languages like **PHP** that make
   // it difficult to read the body of `PUT` requests.
   Backbone.sync = function(method, model, options) {
-    var type = methodMap[method];
+    var mappedMethod = methodMap[method];
 
     // Default JSON-request options.
     var params = _.extend({
-      type:         type,
+      method:         mappedMethod,
       contentType:  'application/json',
       dataType:     'json',
       processData:  false
@@ -964,7 +971,7 @@
 
     // Ensure that we have the appropriate request data.
     if (!params.data && model && (method == 'create' || method == 'update')) {
-      params.data = JSON.stringify(model.toJSON());
+      params.data = model.toJSON();
     }
 
     // For older servers, emulate JSON by encoding the request into an HTML-form.
@@ -977,17 +984,21 @@
     // For older servers, emulate HTTP by mimicking the HTTP method with `_method`
     // And an `X-HTTP-Method-Override` header.
     if (Backbone.emulateHTTP) {
-      if (type === 'PUT' || type === 'DELETE') {
-        if (Backbone.emulateJSON) params.data._method = type;
-        params.type = 'POST';
+      if (mappedMethod === 'PUT' || mappedMethod === 'DELETE') {
+        if (Backbone.emulateJSON) params.data._method = mappedMethod;
+
+        params.method = 'POST';
+        params.headers = (params.headers || {});
+        params.headers['X-HTTP-Method-Override'] = mappedMethod;
+
         params.beforeSend = function(xhr) {
-          xhr.setRequestHeader('X-HTTP-Method-Override', type);
+          xhr.setRequestHeader('X-HTTP-Method-Override', mappedMethod);
         };
       }
     }
 
     // Make the request.
-    $.ajax(params);
+    new Request(params).send();
   };
 
   // Helpers
@@ -1064,3 +1075,4 @@
   };
 
 }).call(this);
+// vim:ts=2:sw=2:expandtab

@@ -1,4 +1,4 @@
-$(document).ready(function() {
+window.addEvent('domready', function() {
 
   module("Backbone.View");
 
@@ -16,8 +16,9 @@ $(document).ready(function() {
 
   test("View: jQuery", function() {
     view.el = document.body;
-    equals(view.$('#qunit-header a').get(0).innerHTML, ' Backbone Test Suite');
-    equals(view.$('#qunit-header a').get(1).innerHTML, 'Backbone Speed Suite');
+	console.log(view.$('.qunit-header a'));
+    equals(view.$('.qunit-header a')[0].innerHTML, ' Backbone Test Suite');
+    equals(view.$('.qunit-header a')[1].innerHTML, 'Backbone Speed Suite');
   });
 
   test("View: make", function() {

@@ -1,4 +1,4 @@
-$(document).ready(function() {
+window.addEvent('domready', function() {
 
   module("Backbone.Collection");
 
@@ -183,9 +183,9 @@ $(document).ready(function() {
     equals(counter, 2);
   });
 
-  test("Colllection: model destroy removes from all collections", function() {
+  test("Collection: model destroy removes from all collections", function() {
     var e = new Backbone.Model({id: 5, title: 'Othello'});
-    e.sync = function(method, model, options) { options.success({}); };
+    e.sync = function(method, model, options) { options.onSuccess({}); };
     var colE = new Backbone.Collection([e]);
     var colF = new Backbone.Collection([e]);
     e.destroy();

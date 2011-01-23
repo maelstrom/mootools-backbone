@@ -10,7 +10,7 @@
 
 /** Resets */
 
-#qunit-tests, #qunit-tests ol, #qunit-header, #qunit-banner, #qunit-userAgent, #qunit-testresult {
+#qunit-tests, #qunit-tests ol, .qunit-header, #qunit-banner, #qunit-userAgent, #qunit-testresult {
 	margin: 0;
 	padding: 0;
 }
@@ -18,7 +18,7 @@
 
 /** Header */
 
-#qunit-header {
+.qunit-header {
 	padding: 0.5em 0 0.5em 1em;
 
 	color: #8699a4;
@@ -34,13 +34,13 @@
 	-webkit-border-top-left-radius: 15px;
 }
 
-#qunit-header a {
+.qunit-header a {
 	text-decoration: none;
 	color: #c2ccd1;
 }
 
-#qunit-header a:hover,
-#qunit-header a:focus {
+.qunit-header a:hover,
+.qunit-header a:focus {
 	color: #fff;
 }
 

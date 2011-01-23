@@ -1,4 +1,4 @@
-(function(){
+(function() {
 
   var object = {};
   _.extend(object, Backbone.Events);
