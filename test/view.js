@@ -16,16 +16,14 @@ window.addEvent('domready', function() {
 
   test("View: jQuery", function() {
     view.el = document.body;
-	console.log(view.$('.qunit-header a'));
-    equals(view.$('.qunit-header a')[0].innerHTML, ' Backbone Test Suite');
-    equals(view.$('.qunit-header a')[1].innerHTML, 'Backbone Speed Suite');
+    equals(view.$('.qunit-header a')[0].innerHTML, 'Backbone Speed Suite');
   });
 
   test("View: make", function() {
     var div = view.make('div', {id: 'test-div'}, "one two three");
     equals(div.tagName.toLowerCase(), 'div');
     equals(div.id, 'test-div');
-    equals($(div).text(), 'one two three');
+    equals($(div).get('text'), 'one two three');
   });
 
   test("View: initialize", function() {
@@ -40,21 +38,30 @@ window.addEvent('domready', function() {
 
   test("View: delegateEvents", function() {
     var counter = counter2 = 0;
+
     view.el = document.body;
     view.increment = function(){ counter++; };
-    $(view.el).bind('click', function(){ counter2++; });
-    var events = {"click #qunit-banner": "increment"};
+
+    view.el.addEvent('click:relay(h2)', function(){ counter2++; });
+    var events = {"click h2": "increment"};
+
     view.delegateEvents(events);
-    $('#qunit-banner').trigger('click');
+
+    view.el.fireEvent('click', {target: $('qunit-banner')});
     equals(counter, 1);
     equals(counter2, 1);
-    $('#qunit-banner').trigger('click');
+
+    view.el.fireEvent('click', {target: $('qunit-banner')});
     equals(counter, 2);
     equals(counter2, 2);
+
+	// Test it still works after adding more events
     view.delegateEvents(events);
-    $('#qunit-banner').trigger('click');
+
+    view.el.fireEvent('click', {target: $('qunit-banner')});
     equals(counter, 3);
     equals(counter2, 3);
+
   });
 
   test("View: _ensureElement with DOM node el", function() {
@@ -76,7 +83,7 @@ window.addEvent('domready', function() {
       el: "body > h2"
     });
     view = new ViewClass;
-    equals(view.el, $("#qunit-banner").get(0));
+    equals(view.el, $("qunit-banner"));
 
     ViewClass = Backbone.View.extend({
       el: "#nonexistent"
@@ -86,8 +93,9 @@ window.addEvent('domready', function() {
   });
 
   test("View: multiple views per element", function() {
+    var body = $$("body").shift();
     var count = 0, ViewClass = Backbone.View.extend({
-      el: $("body"),
+      el: body,
       events: {
         "click": "click"
       },
@@ -97,15 +105,15 @@ window.addEvent('domready', function() {
     });
 
     var view1 = new ViewClass;
-    $("body").trigger("click");
+    body.fireEvent("click");
     equals(1, count);
 
     var view2 = new ViewClass;
-    $("body").trigger("click");
+    body.fireEvent("click");
     equals(3, count);
 
     view1.delegateEvents();
-    $("body").trigger("click");
+    body.fireEvent("click");
     equals(5, count);
   });
 });

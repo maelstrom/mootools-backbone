@@ -53,7 +53,7 @@ window.addEvent('domready', function() {
       equals(controller.query, 'news');
       equals(controller.page, undefined);
       start();
-    }, 10);
+    }, 100);
   });
 
   asyncTest("Controller: routes (two part)", 2, function() {
@@ -62,7 +62,7 @@ window.addEvent('domready', function() {
       equals(controller.query, 'nyc');
       equals(controller.page, '10');
       start();
-    }, 10);
+    }, 100);
   });
 
   asyncTest("Controller: routes (splats)", function() {
@@ -70,7 +70,7 @@ window.addEvent('domready', function() {
     setTimeout(function() {
       equals(controller.args, 'long-list/of/splatted_99args');
       start();
-    }, 10);
+    }, 100);
   });
 
   asyncTest("Controller: routes (complex)", 3, function() {
@@ -80,7 +80,7 @@ window.addEvent('domready', function() {
       equals(controller.part, 'part');
       equals(controller.rest, 'four/five/six/seven');
       start();
-    }, 10);
+    }, 100);
   });
 
   asyncTest("Controller: routes (query)", 2, function() {
@@ -90,7 +90,7 @@ window.addEvent('domready', function() {
       equals(controller.queryArgs, 'a=b&c=d');
       start();
       window.location.hash = '';
-    }, 10);
+    }, 100);
   });
 
 });

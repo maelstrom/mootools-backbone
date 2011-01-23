@@ -723,16 +723,8 @@
     // Start the hash change handling, returning `true` if the current URL matches
     // an existing route, and `false` otherwise.
     start : function() {
-      var docMode = document.documentMode;
-      var oldIE = (Browser.ie && (!docMode || docMode <= 7));
-      if (oldIE) {
-        this.iframe = new Element('iframe', {src:"javascript:0", tabindex:"-1", styles:{display:'none'}}).appendTo(document.body);
-      }
-      if ('onhashchange' in window && !oldIE) {
-        window.addEvent('hashchange', this.checkUrl);
-      } else {
-        setInterval(this.checkUrl, this.interval);
-      }
+      window.store('hashchange:interval',this.interval);
+      window.addEvent('hashchange', this.checkUrl);
       return this.loadUrl();
     },
 
@@ -868,7 +860,7 @@
       var newEvents = {};
       var key;
       for (key in oldEvents) {
-        this.el.removeEvents(key, oldEvents[key]);
+        this.el.removeEvent(key, oldEvents[key]);
       }
 
       for (key in events) {
@@ -910,7 +902,7 @@
         if (this.className) attrs['class'] = this.className;
         this.el = this.make(this.tagName, attrs);
       } else if (_.isString(this.el)) {
-        this.el = $(this.el);
+        this.el = $$(this.el).shift();
       }
     }
 

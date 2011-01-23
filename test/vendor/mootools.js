@@ -3827,6 +3827,40 @@ window.addEvent('load', function(){
 /*
 ---
 
+script: More.js
+
+name: More
+
+description: MooTools More
+
+license: MIT-style license
+
+authors:
+  - Guillermo Rauch
+  - Thomas Aylott
+  - Scott Kyle
+  - Arian Stolwijk
+  - Tim Wienk
+  - Christoph Pojer
+  - Aaron Newton
+
+requires:
+  - Core/MooTools
+
+provides: [MooTools.More]
+
+...
+*/
+
+MooTools.More = {
+	'version': '1.3.0.1',
+	'build': '6dce99bed2792dffcbbbb4ddc15a1fb9a41994b5'
+};
+
+
+/*
+---
+
 name: Class
 
 description: Contains the Class Function for easily creating, extending, and implementing reusable Classes.
@@ -4066,210 +4100,6 @@ this.Options = new Class({
 /*
 ---
 
-name: Fx
-
-description: Contains the basic animation logic to be extended by all other Fx Classes.
-
-license: MIT-style license.
-
-requires: [Chain, Events, Options]
-
-provides: Fx
-
-...
-*/
-
-(function(){
-
-var Fx = this.Fx = new Class({
-
-	Implements: [Chain, Events, Options],
-
-	options: {
-		/*
-		onStart: nil,
-		onCancel: nil,
-		onComplete: nil,
-		*/
-		fps: 50,
-		unit: false,
-		duration: 500,
-		link: 'ignore'
-	},
-
-	initialize: function(options){
-		this.subject = this.subject || this;
-		this.setOptions(options);
-	},
-
-	getTransition: function(){
-		return function(p){
-			return -(Math.cos(Math.PI * p) - 1) / 2;
-		};
-	},
-
-	step: function(){
-		var time = Date.now();
-		if (time < this.time + this.options.duration){
-			var delta = this.transition((time - this.time) / this.options.duration);
-			this.set(this.compute(this.from, this.to, delta));
-		} else {
-			this.set(this.compute(this.from, this.to, 1));
-			this.complete();
-		}
-	},
-
-	set: function(now){
-		return now;
-	},
-
-	compute: function(from, to, delta){
-		return Fx.compute(from, to, delta);
-	},
-
-	check: function(){
-		if (!this.timer) return true;
-		switch (this.options.link){
-			case 'cancel': this.cancel(); return true;
-			case 'chain': this.chain(this.caller.pass(arguments, this)); return false;
-		}
-		return false;
-	},
-
-	start: function(from, to){
-		if (!this.check(from, to)) return this;
-		var duration = this.options.duration;
-		this.options.duration = Fx.Durations[duration] || duration.toInt();
-		this.from = from;
-		this.to = to;
-		this.time = 0;
-		this.transition = this.getTransition();
-		this.startTimer();
-		this.onStart();
-		return this;
-	},
-
-	complete: function(){
-		if (this.stopTimer()) this.onComplete();
-		return this;
-	},
-
-	cancel: function(){
-		if (this.stopTimer()) this.onCancel();
-		return this;
-	},
-
-	onStart: function(){
-		this.fireEvent('start', this.subject);
-	},
-
-	onComplete: function(){
-		this.fireEvent('complete', this.subject);
-		if (!this.callChain()) this.fireEvent('chainComplete', this.subject);
-	},
-
-	onCancel: function(){
-		this.fireEvent('cancel', this.subject).clearChain();
-	},
-
-	pause: function(){
-		this.stopTimer();
-		return this;
-	},
-
-	resume: function(){
-		this.startTimer();
-		return this;
-	},
-
-	stopTimer: function(){
-		if (!this.timer) return false;
-		this.time = Date.now() - this.time;
-		this.timer = removeInstance(this);
-		return true;
-	},
-
-	startTimer: function(){
-		if (this.timer) return false;
-		this.time = Date.now() - this.time;
-		this.timer = addInstance(this);
-		return true;
-	}
-
-});
-
-Fx.compute = function(from, to, delta){
-	return (to - from) * delta + from;
-};
-
-Fx.Durations = {'short': 250, 'normal': 500, 'long': 1000};
-
-// global timers
-
-var instances = {}, timers = {};
-
-var loop = function(){
-	for (var i = this.length; i--;){
-		if (this[i]) this[i].step();
-	}
-};
-
-var addInstance = function(instance){
-	var fps = instance.options.fps,
-		list = instances[fps] || (instances[fps] = []);
-	list.push(instance);
-	if (!timers[fps]) timers[fps] = loop.periodical(Math.round(1000 / fps), list);
-	return true;
-};
-
-var removeInstance = function(instance){
-	var fps = instance.options.fps,
-		list = instances[fps] || [];
-	list.erase(instance);
-	if (!list.length && timers[fps]) timers[fps] = clearInterval(timers[fps]);
-	return false;
-};
-
-})();
-
-
-/*
----
-
-script: More.js
-
-name: More
-
-description: MooTools More
-
-license: MIT-style license
-
-authors:
-  - Guillermo Rauch
-  - Thomas Aylott
-  - Scott Kyle
-  - Arian Stolwijk
-  - Tim Wienk
-  - Christoph Pojer
-  - Aaron Newton
-
-requires:
-  - Core/MooTools
-
-provides: [MooTools.More]
-
-...
-*/
-
-MooTools.More = {
-	'version': '1.3.0.1',
-	'build': '6dce99bed2792dffcbbbb4ddc15a1fb9a41994b5'
-};
-
-
-/*
----
-
 name: Events.Pseudos
 
 description: Adds the functionallity to add pseudo events
@@ -4486,4 +4316,582 @@ Event.definePseudo('relay', function(split, fn, args, proxy){
 		condition: Element.Events.mouseleave.condition
 	}
 });
+
+
+/*
+---
+
+name: Request
+
+description: Powerful all purpose Request Class. Uses XMLHTTPRequest.
+
+license: MIT-style license.
+
+requires: [Object, Element, Chain, Events, Options, Browser]
+
+provides: Request
+
+...
+*/
+
+(function(){
+
+var progressSupport = ('onprogress' in new Browser.Request);
+
+var Request = this.Request = new Class({
+
+	Implements: [Chain, Events, Options],
+
+	options: {/*
+		onRequest: function(){},
+		onLoadstart: function(event, xhr){},
+		onProgress: function(event, xhr){},
+		onComplete: function(){},
+		onCancel: function(){},
+		onSuccess: function(responseText, responseXML){},
+		onFailure: function(xhr){},
+		onException: function(headerName, value){},
+		onTimeout: function(){},
+		user: '',
+		password: '',*/
+		url: '',
+		data: '',
+		headers: {
+			'X-Requested-With': 'XMLHttpRequest',
+			'Accept': 'text/javascript, text/html, application/xml, text/xml, */*'
+		},
+		async: true,
+		format: false,
+		method: 'post',
+		link: 'ignore',
+		isSuccess: null,
+		emulation: true,
+		urlEncoded: true,
+		encoding: 'utf-8',
+		evalScripts: false,
+		evalResponse: false,
+		timeout: 0,
+		noCache: false
+	},
+
+	initialize: function(options){
+		this.xhr = new Browser.Request();
+		this.setOptions(options);
+		this.headers = this.options.headers;
+	},
+
+	onStateChange: function(){
+		var xhr = this.xhr;
+		if (xhr.readyState != 4 || !this.running) return;
+		this.running = false;
+		this.status = 0;
+		Function.attempt(function(){
+			var status = xhr.status;
+			this.status = (status == 1223) ? 204 : status;
+		}.bind(this));
+		xhr.onreadystatechange = function(){};
+		clearTimeout(this.timer);
+		
+		this.response = {text: this.xhr.responseText || '', xml: this.xhr.responseXML};
+		if (this.options.isSuccess.call(this, this.status))
+			this.success(this.response.text, this.response.xml);
+		else
+			this.failure();
+	},
+
+	isSuccess: function(){
+		var status = this.status;
+		return (status >= 200 && status < 300);
+	},
+
+	isRunning: function(){
+		return !!this.running;
+	},
+
+	processScripts: function(text){
+		if (this.options.evalResponse || (/(ecma|java)script/).test(this.getHeader('Content-type'))) return Browser.exec(text);
+		return text.stripScripts(this.options.evalScripts);
+	},
+
+	success: function(text, xml){
+		this.onSuccess(this.processScripts(text), xml);
+	},
+
+	onSuccess: function(){
+		this.fireEvent('complete', arguments).fireEvent('success', arguments).callChain();
+	},
+
+	failure: function(){
+		this.onFailure();
+	},
+
+	onFailure: function(){
+		this.fireEvent('complete').fireEvent('failure', this.xhr);
+	},
+	
+	loadstart: function(event){
+		this.fireEvent('loadstart', [event, this.xhr]);
+	},
+	
+	progress: function(event){
+		this.fireEvent('progress', [event, this.xhr]);
+	},
+	
+	timeout: function(){
+		this.fireEvent('timeout', this.xhr);
+	},
+
+	setHeader: function(name, value){
+		this.headers[name] = value;
+		return this;
+	},
+
+	getHeader: function(name){
+		return Function.attempt(function(){
+			return this.xhr.getResponseHeader(name);
+		}.bind(this));
+	},
+
+	check: function(){
+		if (!this.running) return true;
+		switch (this.options.link){
+			case 'cancel': this.cancel(); return true;
+			case 'chain': this.chain(this.caller.pass(arguments, this)); return false;
+		}
+		return false;
+	},
+	
+	send: function(options){
+		if (!this.check(options)) return this;
+
+		this.options.isSuccess = this.options.isSuccess || this.isSuccess;
+		this.running = true;
+
+		var type = typeOf(options);
+		if (type == 'string' || type == 'element') options = {data: options};
+
+		var old = this.options;
+		options = Object.append({data: old.data, url: old.url, method: old.method}, options);
+		var data = options.data, url = String(options.url), method = options.method.toLowerCase();
+
+		switch (typeOf(data)){
+			case 'element': data = document.id(data).toQueryString(); break;
+			case 'object': case 'hash': data = Object.toQueryString(data);
+		}
+
+		if (this.options.format){
+			var format = 'format=' + this.options.format;
+			data = (data) ? format + '&' + data : format;
+		}
+
+		if (this.options.emulation && !['get', 'post'].contains(method)){
+			var _method = '_method=' + method;
+			data = (data) ? _method + '&' + data : _method;
+			method = 'post';
+		}
+
+		if (this.options.urlEncoded && ['post', 'put'].contains(method)){
+			var encoding = (this.options.encoding) ? '; charset=' + this.options.encoding : '';
+			this.headers['Content-type'] = 'application/x-www-form-urlencoded' + encoding;
+		}
+
+		if (!url) url = document.location.pathname;
+		
+		var trimPosition = url.lastIndexOf('/');
+		if (trimPosition > -1 && (trimPosition = url.indexOf('#')) > -1) url = url.substr(0, trimPosition);
+
+		if (this.options.noCache)
+			url += (url.contains('?') ? '&' : '?') + String.uniqueID();
+
+		if (data && method == 'get'){
+			url += (url.contains('?') ? '&' : '?') + data;
+			data = null;
+		}
+
+		var xhr = this.xhr;
+		if (progressSupport){
+			xhr.onloadstart = this.loadstart.bind(this);
+			xhr.onprogress = this.progress.bind(this);
+		}
+
+		xhr.open(method.toUpperCase(), url, this.options.async, this.options.user, this.options.password);
+		if (this.options.user && 'withCredentials' in xhr) xhr.withCredentials = true;
+		
+		xhr.onreadystatechange = this.onStateChange.bind(this);
+
+		Object.each(this.headers, function(value, key){
+			try {
+				xhr.setRequestHeader(key, value);
+			} catch (e){
+				this.fireEvent('exception', [key, value]);
+			}
+		}, this);
+
+		this.fireEvent('request');
+		xhr.send(data);
+		if (!this.options.async) this.onStateChange();
+		if (this.options.timeout) this.timer = this.timeout.delay(this.options.timeout, this);
+		return this;
+	},
+
+	cancel: function(){
+		if (!this.running) return this;
+		this.running = false;
+		var xhr = this.xhr;
+		xhr.abort();
+		clearTimeout(this.timer);
+		xhr.onreadystatechange = xhr.onprogress = xhr.onloadstart = function(){};
+		this.xhr = new Browser.Request();
+		this.fireEvent('cancel');
+		return this;
+	}
+
+});
+
+var methods = {};
+['get', 'post', 'put', 'delete', 'GET', 'POST', 'PUT', 'DELETE'].each(function(method){
+	methods[method] = function(data){
+		return this.send({
+			data: data,
+			method: method
+		});
+	};
+});
+
+Request.implement(methods);
+
+Element.Properties.send = {
+
+	set: function(options){
+		var send = this.get('send').cancel();
+		send.setOptions(options);
+		return this;
+	},
+
+	get: function(){
+		var send = this.retrieve('send');
+		if (!send){
+			send = new Request({
+				data: this, link: 'cancel', method: this.get('method') || 'post', url: this.get('action')
+			});
+			this.store('send', send);
+		}
+		return send;
+	}
+
+};
+
+Element.implement({
+
+	send: function(url){
+		var sender = this.get('send');
+		sender.send({data: this, url: url || sender.options.url});
+		return this;
+	}
+
+});
+
+})();
+
+/*
+---
+name: onHashChange
+description: onHashChange event in MooTools
+requires: [Core/Event, Core/Element, Core/Elements, Core/Browser, Core/Iframe]
+provides: onHashChange
+...
+*/
+(function($,$$) {
+
+  //setup the browser types
+  var mt13 = window.MooTools && window.MooTools.version == '1.3';
+
+  //check mootools 1.3
+  if(mt13) { 
+    if(!window.$empty) {//non compatibility mode
+      $empty = Function.from;
+      $clear = clearTimeout;
+    }
+    if(!window.$type) {
+      $type = typeOf;
+    }
+  }
+  else if(Browser.Engine) {
+    Browser.ie6 = Browser.Engine.trident4;
+    Browser.ie7 = Browser.Engine.trident5;
+    Browser.opera = Browser.Engine.presto;
+  }
+
+
+//set the events
+window.store('hashchange:interval',300);
+window.store('hashchange:ieframe-src','./blank.html');
+window.store('hashchange:implemented',!!('onhashchange' in window));
+
+Element.Events.hashchange = {
+  onAdd:function(fn) {
+          //clear the event
+          Element.Events.hashchange.onAdd = $empty;
+
+          //check the element
+          var self = $(this);
+          var checker = $empty;
+          if($type(self) != 'window') {
+            return; //the window object only supports this
+          }
+
+          //this will prevent the browser from firing the url when the page loads (native onhashchange doesn't do this)
+          window.store('hashchange:changed',false);
+
+          //this global method gets called when the hash value changes for all browsers
+          var hashchanged = function(hash,tostore) {
+            window.store('hashchange:current',tostore || hash);
+            if(window.retrieve('hashchange:changed')) {
+              hash = hash.trim();
+              if(hash.length==0) {
+                var url = new String(window.location);
+                if(url.indexOf('#')>=0)
+                  hash = '#';
+              }
+              window.fireEvent('hashchange',[hash]);
+            }
+            else {
+              window.store('hashchange:changed',true);
+            }
+          };
+
+          //this is used for when a hash change method has already been defined (futureproof)
+          if(typeof window.onhashchange == 'function' && fn !== window.onhashchange) {
+            //bind the method to the mootools method stack
+            window.addEvent('hashchange',window.onhashchange);
+
+            //remove the event
+            window.onhashchange = null;
+          }
+
+          //Oldschool IE browsers
+          if(Browser.ie6 || Browser.ie7) { 
+
+            //IE6 and IE7 require an empty frame to relay the change (back and forward buttons)
+            //custom IE method
+            checker = function(url,frame) {
+
+              //clear the timer
+              var checker = window.retrieve('hashchange:checker');
+              var timer = window.retrieve('hashchange:timer');
+              $clear(timer); //just incase
+              timer = null;
+
+              //IE may give a hash value, a path value or a url
+              var isNull = frame && url.length == 0;
+              var isEmpty = url == '#';
+              var hash, compare, cleanurl = unescape(new String(window.location));
+
+              if(isEmpty) {
+                compare = hash = '#';
+              }
+              else if(isNull) {
+                compare = hash = '';	
+              }
+              else {
+
+                //setup the url
+                url = url != null ? url : cleanurl;
+                hash = url;
+
+                if(url.length>0) { //not an empty hash
+                  var index = url.indexOf('#');
+                  if(index>=0)
+                    hash = url.substr(index);
+                }
+
+                //check the hash
+                compare = hash.toLowerCase();
+              }
+
+              //if the hash value is different, then it has changed
+              var current = window.retrieve('hashchange:current');
+              if(current != compare) {
+
+                //update the url
+                if(frame) {
+                  url = cleanurl;
+                  if(current) {
+                    url = url.replace(current,hash);
+                  }
+                  else {
+                    url += hash;
+                  }
+                  window.location = url;
+                }
+
+                //check the flag
+                var hasChanged = !frame && window.retrieve('hashchange:changed');
+
+                //change the hash
+                hashchanged(hash,compare);
+
+                if(hasChanged) {
+                  //this will prevent the frame from changing the first time
+                  window.retrieve('hashchange:ieframe').setPath(hash);
+                }
+              }
+
+              //reset the timer
+              timer = checker.delay(window.retrieve('hashchange:interval'));
+              window.store('hashchange:timer',timer);
+
+            };
+
+            //create the frame
+            var src = window.retrieve('hashchange:ieframe-src');
+            var ieframe = new IFrame({
+              'id':'hashchange-ie-frame',
+                'src':src+'?start',
+                'styles':{
+                  'width':0,
+                'height':0,
+                'position':'absolute',
+                'top':-9999,
+                'left':-9999
+                },
+                'onload':function() {
+                  //this shouldn't exist when a hash is changed, if it does then the frame has just loaded
+                  var self = $('hashchange-ie-frame');
+                  if(self.retrieve('loaded')) {
+                    //examine the url
+                    var url = unescape(new String(self.contentWindow.location));
+                    var index = url.indexOf('?');
+                    if(index>=0) {
+                      var path = '', empty = false;
+                      if(url.indexOf('?empty')>=0) {
+                        path = '#';
+                      }
+                      else {
+                        index = url.indexOf('?!');
+                        if(index>=0) {
+                          path = url.substr(index+2);
+                          path = '#' + path;
+                        }
+                      }
+
+                      var current = window.retrieve('hashchange:current');
+                      if(current != path) {
+                        window.retrieve('hashchange:checker')(path,true);
+                      }
+                    }
+                  }
+                  else {
+                    self.store('loaded',true);
+                  }
+                }.bind(window)
+            });
+
+            //save the frame
+            window.store('hashchange:ieframe',ieframe);
+            ieframe.injectInside(document.body);
+
+            var doc = ieframe.contentWindow;
+            ieframe.setPath = function(path) {
+              if(path.charAt(0)=='#') {
+                path = path.substr(1);
+                if(path.length==0) {
+                  this.contentWindow.location = src + '?empty';
+                  return;
+                }
+              }
+              this.contentWindow.location = src + '?!' + escape(path);
+            }.bind(ieframe);
+          }
+          else if(window.retrieve('hashchange:implemented')) { //Firefox 3.6, Chrome 5, IE8 and Safari 5 all support the event natively
+
+            //check the hashcheck
+            checker = window.onhashchange = function(hash) {
+
+              //make sure the hash is a string
+              hash = hash && typeof hash == 'string' ? hash : new String(window.location.hash);
+
+              //this is important so that the URL hash has changed BEFORE this is fired
+              hashchanged.delay(1,window,[hash]);
+
+            }
+          }
+          else { //Others
+            //opera requires a history mode to be set so that #hash values are recorded in history (back and forward buttons)
+            if(Browser.opera) {
+              history.navigationMode='compatible';
+            }
+
+            //set the inteval method
+            checker = function(hash) {
+
+              //clear the timer
+              var checker = window.retrieve('hashchange:checker');
+              var timer = window.retrieve('hashchange:timer');
+              $clear(timer); //just incase
+              timer = null;
+
+              //compare the hash
+              var hash = hash || new String(window.location.hash);
+              var compare = hash.toLowerCase();
+              if(hash.length==0 && new String(window.location).indexOf('#')>=0) {
+                compare = '#';
+              }
+              var current = window.retrieve('hashchange:current');
+              if(current != compare) {
+                hashchanged(hash,compare);
+              }
+
+              //reset the timer
+              timer = checker.delay(window.retrieve('hashchange:interval'));
+              window.store('hashchange:timer',timer);
+
+            }
+          }
+
+          //run the loop
+          window.store('hashchange:checker',checker);
+          checker();
+
+          //setup a custom go event
+          var sethash = function(hash) {
+            if(hash.charAt(0)!='#')
+              hash = '#' + hash;
+            if(Browser.ie6 || Browser.ie7) { //ie6 and ie7
+              var url = new String(window.location);
+              var current = url.match(/#.+?$/);
+              current = current && current[0] ? current[0] : '';
+              if(current.length>0) {
+                window.location = url.replace(current,hash);
+              }
+              else {
+                window.location += hash;
+              }
+            }
+            else { //other, more advanced browsers
+              window.location.hash = hash;
+            }
+
+            //check the hash right away
+            if(!window.retrieve('haschange:implemented')) {
+              window.retrieve('hashchange:checker')();
+            }
+          }
+
+          //check ie browsers
+          window.sethash = sethash;
+        },
+
+  onDelete:function() {
+             if($type(this) == 'window') {
+               var timer = window.retrieve('hashchange:timer');
+               if(timer) {
+                 $clear(timer); timer = null;
+                 window.store('hashchange:timer',null);
+               }
+             }
+           }
+}
+
+})(document.id,$$);
 

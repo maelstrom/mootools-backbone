@@ -6,9 +6,10 @@ window.addEvent('domready', function() {
   window.lastRequest = null;
 
   // Stub out jQuery.ajax...
-  $.ajax = function(obj) {
-    lastRequest = obj;
+  Request.prototype.send = function() {
+    lastRequest = this.options;
   };
+
 
   var Library = Backbone.Collection.extend({
     url : function() { return '/library'; }
@@ -26,7 +27,7 @@ window.addEvent('domready', function() {
     Backbone.sync = originalSync;
     library.fetch();
     equals(lastRequest.url, '/library');
-    equals(lastRequest.type, 'GET');
+    equals(lastRequest.method, 'GET');
     equals(lastRequest.dataType, 'json');
     ok(_.isEmpty(lastRequest.data));
   });
@@ -41,9 +42,9 @@ window.addEvent('domready', function() {
   test("sync: create", function() {
     library.add(library.create(attrs));
     equals(lastRequest.url, '/library');
-    equals(lastRequest.type, 'POST');
+    equals(lastRequest.method, 'POST');
     equals(lastRequest.dataType, 'json');
-    var data = JSON.parse(lastRequest.data);
+    var data = lastRequest.data;
     equals(data.title, 'The Tempest');
     equals(data.author, 'Bill Shakespeare');
     equals(data.length, 123);
@@ -52,9 +53,9 @@ window.addEvent('domready', function() {
   test("sync: update", function() {
     library.first().save({id: '1-the-tempest', author: 'William Shakespeare'});
     equals(lastRequest.url, '/library/1-the-tempest');
-    equals(lastRequest.type, 'PUT');
+    equals(lastRequest.method, 'PUT');
     equals(lastRequest.dataType, 'json');
-    var data = JSON.parse(lastRequest.data);
+    var data = lastRequest.data;
     equals(data.id, '1-the-tempest');
     equals(data.title, 'The Tempest');
     equals(data.author, 'William Shakespeare');
@@ -65,10 +66,10 @@ window.addEvent('domready', function() {
     Backbone.emulateHTTP = Backbone.emulateJSON = true;
     library.first().save({id: '2-the-tempest', author: 'Tim Shakespeare'});
     equals(lastRequest.url, '/library/2-the-tempest');
-    equals(lastRequest.type, 'POST');
+    equals(lastRequest.method, 'POST');
     equals(lastRequest.dataType, 'json');
     equals(lastRequest.data._method, 'PUT');
-    var data = JSON.parse(lastRequest.data.model);
+    var data = (lastRequest.data.model);
     equals(data.id, '2-the-tempest');
     equals(data.author, 'Tim Shakespeare');
     equals(data.length, 123);
@@ -79,9 +80,9 @@ window.addEvent('domready', function() {
     Backbone.emulateHTTP = true;
     library.first().save({id: '2-the-tempest', author: 'Tim Shakespeare'});
     equals(lastRequest.url, '/library/2-the-tempest');
-    equals(lastRequest.type, 'POST');
+    equals(lastRequest.method, 'POST');
     equals(lastRequest.contentType, 'application/json');
-    var data = JSON.parse(lastRequest.data);
+    var data = (lastRequest.data);
     equals(data.id, '2-the-tempest');
     equals(data.author, 'Tim Shakespeare');
     equals(data.length, 123);
@@ -92,9 +93,9 @@ window.addEvent('domready', function() {
     Backbone.emulateJSON = true;
     library.first().save({id: '2-the-tempest', author: 'Tim Shakespeare'});
     equals(lastRequest.url, '/library/2-the-tempest');
-    equals(lastRequest.type, 'PUT');
+    equals(lastRequest.method, 'PUT');
     equals(lastRequest.contentType, 'application/x-www-form-urlencoded');
-    var data = JSON.parse(lastRequest.data.model);
+    var data = (lastRequest.data.model);
     equals(data.id, '2-the-tempest');
     equals(data.author, 'Tim Shakespeare');
     equals(data.length, 123);
@@ -104,22 +105,22 @@ window.addEvent('domready', function() {
   test("sync: read model", function() {
     library.first().fetch();
     equals(lastRequest.url, '/library/2-the-tempest');
-    equals(lastRequest.type, 'GET');
+    equals(lastRequest.method, 'GET');
     ok(_.isEmpty(lastRequest.data));
   });
 
   test("sync: destroy", function() {
     library.first().destroy();
     equals(lastRequest.url, '/library/2-the-tempest');
-    equals(lastRequest.type, 'DELETE');
-    equals(lastRequest.data, null);
+    equals(lastRequest.method, 'DELETE');
+    equals(lastRequest.data, "");
   });
 
   test("sync: destroy with emulateHTTP", function() {
     Backbone.emulateHTTP = Backbone.emulateJSON = true;
     library.first().destroy();
     equals(lastRequest.url, '/library/2-the-tempest');
-    equals(lastRequest.type, 'POST');
+    equals(lastRequest.method, 'POST');
     equals(JSON.stringify(lastRequest.data), '{"_method":"DELETE"}');
     Backbone.emulateHTTP = Backbone.emulateJSON = false;
   });
