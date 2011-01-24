@@ -4,7 +4,7 @@
 // to persist Backbone models within your browser.
 
 // Load the application once the DOM is ready, using `jQuery.ready`:
-$(function(){
+window.addEvent('domready', function() {
 
   // Todo Model
   // ----------
@@ -88,7 +88,7 @@ $(function(){
     tagName:  "li",
 
     // Cache the template function for a single item.
-    template: _.template($('#item-template').html()),
+    template: _.template($('item-template').get('html')),
 
     // The DOM events specific to an item.
     events: {
@@ -109,7 +109,7 @@ $(function(){
 
     // Re-render the contents of the todo item.
     render: function() {
-      $(this.el).html(this.template(this.model.toJSON()));
+      this.el.set('html', this.template(this.model.toJSON()));
       this.setContent();
       return this;
     },
@@ -118,10 +118,10 @@ $(function(){
     // we use `jQuery.text` to set the contents of the todo item.
     setContent: function() {
       var content = this.model.get('content');
-      this.$('.todo-content').text(content);
-      this.input = this.$('.todo-input');
-      this.input.bind('blur', this.close);
-      this.input.val(content);
+      this.$('.todo-content').set('text', content);
+      this.input = this.$('.todo-input').shift();
+      this.input.addEvent('blur', this.close);
+      this.input.set('value', content);
     },
 
     // Toggle the `"done"` state of the model.
@@ -131,24 +131,24 @@ $(function(){
 
     // Switch this view into `"editing"` mode, displaying the input field.
     edit: function() {
-      $(this.el).addClass("editing");
+      this.el.addClass("editing");
       this.input.focus();
     },
 
     // Close the `"editing"` mode, saving changes to the todo.
     close: function() {
-      this.model.save({content: this.input.val()});
-      $(this.el).removeClass("editing");
+      this.model.save({content: this.input.get('value')});
+      this.el.removeClass("editing");
     },
 
     // If you hit `enter`, we're through editing the item.
     updateOnEnter: function(e) {
-      if (e.keyCode == 13) this.close();
+      if (e.key == 'enter') this.close();
     },
 
     // Remove this view from the DOM.
     remove: function() {
-      $(this.el).remove();
+      this.el.dispose();
     },
 
     // Remove the item, destroy the model.
@@ -166,10 +166,10 @@ $(function(){
 
     // Instead of generating a new element, bind to the existing skeleton of
     // the App already present in the HTML.
-    el: $("#todoapp"),
+    el: $("todoapp"),
 
     // Our template for the line of statistics at the bottom of the app.
-    statsTemplate: _.template($('#stats-template').html()),
+    statsTemplate: _.template($('stats-template').get('html')),
 
     // Delegated events for creating new items, and clearing completed ones.
     events: {
@@ -184,7 +184,7 @@ $(function(){
     initialize: function() {
       _.bindAll(this, 'addOne', 'addAll', 'render');
 
-      this.input    = this.$("#new-todo");
+      this.input    = this.$("#new-todo")[0];
 
       Todos.bind('add',     this.addOne);
       Todos.bind('refresh', this.addAll);
@@ -197,7 +197,7 @@ $(function(){
     // of the app doesn't change.
     render: function() {
       var done = Todos.done().length;
-      this.$('#todo-stats').html(this.statsTemplate({
+      this.$('#todo-stats').set('html', this.statsTemplate({
         total:      Todos.length,
         done:       Todos.done().length,
         remaining:  Todos.remaining().length
@@ -208,7 +208,7 @@ $(function(){
     // appending its element to the `<ul>`.
     addOne: function(todo) {
       var view = new TodoView({model: todo});
-      this.$("#todo-list").append(view.render().el);
+      this.$("#todo-list").grab(view.render().el);
     },
 
     // Add all items in the **Todos** collection at once.
@@ -219,7 +219,7 @@ $(function(){
     // Generate the attributes for a new Todo item.
     newAttributes: function() {
       return {
-        content: this.input.val(),
+        content: this.input.get('value'),
         order:   Todos.nextOrder(),
         done:    false
       };
@@ -228,9 +228,9 @@ $(function(){
     // If you hit return in the main input field, create new **Todo** model,
     // persisting it to *localStorage*.
     createOnEnter: function(e) {
-      if (e.keyCode != 13) return;
+      if (e.key != 'enter') return;
       Todos.create(this.newAttributes());
-      this.input.val('');
+      this.input.set('value', '');
     },
 
     // Clear all done todo items, destroying their models.
@@ -242,12 +242,13 @@ $(function(){
     // Lazily show the tooltip that tells you to press `enter` to save
     // a new todo item, after one second.
     showTooltip: function(e) {
-      var tooltip = this.$(".ui-tooltip-top");
-      var val = this.input.val();
-      tooltip.fadeOut();
+      var tooltip = this.$(".ui-tooltip-top")[0];
+      var val = this.input.get('value');
+	  tooltip.setStyles({display: 'block'});
+      tooltip.fade('hide');
       if (this.tooltipTimeout) clearTimeout(this.tooltipTimeout);
-      if (val == '' || val == this.input.attr('placeholder')) return;
-      var show = function(){ tooltip.show().fadeIn(); };
+      if (val == '' || val == this.input.get('placeholder')) return;
+      var show = function(){ tooltip.fade('in'); };
       this.tooltipTimeout = _.delay(show, 1000);
     }
 
