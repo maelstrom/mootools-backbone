@@ -516,8 +516,8 @@
       } else {
         model.collection = coll;
       }
-      var success = options.success;
-      options.success = function(nextModel, resp) {
+      var success = options.onSuccess;
+      options.onSuccess = function(nextModel, resp) {
         coll.add(nextModel);
         if (success) success(nextModel, resp);
       };
